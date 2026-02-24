@@ -19,12 +19,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        (application as BusRadarApp).appComponent.inject(this)
 
         setupBackHandler()
         setupBottomNavigation()
 
-        if (savedInstanceState == null) showTab(MapFragment.TAG) { MapFragment() }
+        if (savedInstanceState == null) {
+            showTab(MapFragment.TAG) { MapFragment() }
+        } else {
+            // Restore bottom nav visibility: hidden when BusDetail overlay is active
+            binding.bottomNavigation.isVisible = supportFragmentManager.backStackEntryCount == 0
+        }
     }
 
     private fun setupBottomNavigation() {
@@ -38,11 +42,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Shows a bottom-nav tab fragment using show/hide so each tab preserves its state.
-    // A new instance is created only on the first visit.
+    /**
+     * Shows a bottom-nav tab fragment using show/hide so each tab preserves its state.
+     * BusDetailFragment overlays are excluded from hiding to avoid corrupting the backstack.
+     */
     private fun showTab(tag: String, creator: () -> Fragment) {
         val transaction = supportFragmentManager.beginTransaction()
-        supportFragmentManager.fragments.forEach { transaction.hide(it) }
+        supportFragmentManager.fragments
+            .filter { it !is BusDetailFragment }
+            .forEach { transaction.hide(it) }
 
         val existing = supportFragmentManager.findFragmentByTag(tag)
         if (existing == null) transaction.add(R.id.fragment_container, creator(), tag)
@@ -50,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         transaction.commit()
     }
 
-    // Opens BusDetail as a full-screen overlay, hiding the bottom navigation.
+    /** Opens BusDetail as a full-screen overlay, hiding the bottom navigation. */
     fun openBusDetail(vehicleId: String) {
         binding.bottomNavigation.isVisible = false
         supportFragmentManager.beginTransaction()
