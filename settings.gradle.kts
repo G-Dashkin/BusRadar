@@ -24,3 +24,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "BusRadar"
 include(":app")
+include(":core:di")
+include(":feature:map")
+include(":feature:busdetail")
+include(":feature:search")
+include(":feature:settings")
