@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Read Maps API key from local.properties (never committed to VCS).
+// To set up: add MAPS_API_KEY=your_key_here to local.properties.
+val mapsApiKey: String = project.findProperty("MAPS_API_KEY")?.toString() ?: ""
+
 android {
     namespace = "com.dashkin.busradar"
     compileSdk {
@@ -19,6 +23,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
