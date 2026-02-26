@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="map_retry">Retry</string>
+    <string name="map_error_loading">Failed to load bus positions</string>
+    <string name="map_no_buses">No buses found in this area</string>
+    <string name="map_fab_my_location_description">Center map on my location</string>
+    <string name="map_bus_marker_snippet">Tap for details</string>
+    <string name="map_location_permission_denied">Location permission denied. Enable it in Settings for full functionality.</string>
+</resources>

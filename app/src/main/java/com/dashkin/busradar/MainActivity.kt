@@ -11,7 +11,7 @@ import com.dashkin.busradar.feature.map.presentation.fragment.MapFragment
 import com.dashkin.busradar.feature.search.presentation.fragment.SearchFragment
 import com.dashkin.busradar.feature.settings.presentation.fragment.SettingsFragment
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MapFragment.OnBusSelectedListener {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -23,9 +23,8 @@ class MainActivity : AppCompatActivity() {
         setupBackHandler()
         setupBottomNavigation()
 
-        if (savedInstanceState == null) {
-            showTab(MapFragment.TAG) { MapFragment() }
-        } else {
+        if (savedInstanceState == null) showTab(MapFragment.TAG) { MapFragment() }
+        else {
             // Restore bottom nav visibility: hidden when BusDetail overlay is active
             binding.bottomNavigation.isVisible = supportFragmentManager.backStackEntryCount == 0
         }
@@ -42,10 +41,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Shows a bottom-nav tab fragment using show/hide so each tab preserves its state.
-     * BusDetailFragment overlays are excluded from hiding to avoid corrupting the backstack.
-     */
+    // Shows a bottom-nav tab fragment using show/hide so each tab preserves its state.
+    // BusDetailFragment overlays are excluded from hiding to avoid corrupting the backstack.
     private fun showTab(tag: String, creator: () -> Fragment) {
         val transaction = supportFragmentManager.beginTransaction()
         supportFragmentManager.fragments
@@ -56,6 +53,10 @@ class MainActivity : AppCompatActivity() {
         if (existing == null) transaction.add(R.id.fragment_container, creator(), tag)
         else transaction.show(existing)
         transaction.commit()
+    }
+
+    override fun onBusSelected(vehicleId: String) {
+        openBusDetail(vehicleId)
     }
 
     /** Opens BusDetail as a full-screen overlay, hiding the bottom navigation. */
