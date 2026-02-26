@@ -2,9 +2,10 @@ package com.dashkin.busradar.feature.map.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dashkin.busradar.feature.map.domain.model.Result
+import com.dashkin.busradar.feature.map.domain.model.Outcome
 import com.dashkin.busradar.feature.map.domain.usecase.GetBusPositionsUseCase
 import com.dashkin.busradar.feature.map.presentation.state.MapUiState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +40,13 @@ class MapViewModel @Inject constructor(
     private fun startPolling() {
         pollingJob = viewModelScope.launch {
             while (isActive) {
-                fetchPositions()
+                try {
+                    fetchPositions()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _uiState.value = MapUiState.Error(e.message ?: "Unknown error")
+                }
                 delay(POLLING_INTERVAL_MS)
             }
         }
@@ -47,11 +54,11 @@ class MapViewModel @Inject constructor(
 
     private suspend fun fetchPositions() {
         when (val result = getBusPositionsUseCase()) {
-            is Result.Success -> {
+            is Outcome.Success -> {
                 _uiState.value = if (result.data.isEmpty()) MapUiState.Empty
                 else MapUiState.Success(result.data)
             }
-            is Result.Error -> _uiState.value = MapUiState.Error(result.message)
+            is Outcome.Error -> _uiState.value = MapUiState.Error(result.message)
         }
     }
 

@@ -23,6 +23,7 @@ import com.dashkin.busradar.feature.map.domain.model.BusPosition
 import com.dashkin.busradar.feature.map.presentation.state.MapUiState
 import com.dashkin.busradar.feature.map.presentation.viewmodel.MapViewModel
 import com.dashkin.busradar.feature.map.presentation.viewmodel.MapViewModelFactory
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.SupportMapFragment
@@ -33,8 +34,8 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// Integrates Google Maps with a [SupportMapFragment] child, polls bus positions
-// every 10 seconds via [MapViewModel], and renders markers on the map.
+// Integrates Google Maps with a SupportMapFragment child, polls bus positions
+// every 10 seconds via MapViewModel, and renders markers on the map.
 // Location permission is requested at runtime; the My Location FAB centres
 // the camera on the user's position once permission is granted.
 class MapFragment : Fragment() {
@@ -55,11 +56,15 @@ class MapFragment : Fragment() {
     ) { permissions ->
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) enableMyLocation()
-        else showLocationPermissionDeniedMessage()
+        if (granted) {
+            enableMyLocation()
+        } else {
+            showLocationPermissionDeniedMessage()
+        }
     }
 
-    // region | Lifecycle
+    // region Lifecycle
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
         (requireActivity().application as MapComponentProvider)
@@ -82,14 +87,19 @@ class MapFragment : Fragment() {
         setupFab()
     }
 
+    // Issue #1 fix: clear markers before nulling googleMap so Marker.remove() can succeed
     override fun onDestroyView() {
         super.onDestroyView()
-        googleMap = null
+        busMarkers.values.forEach { it.remove() }
         busMarkers.clear()
+        googleMap = null
         _binding = null
     }
 
-    // endregion | region Map initialisation
+    // endregion
+
+    // region Map initialisation
+
     private fun initMapFragment() {
         val existingMap = childFragmentManager
             .findFragmentByTag(TAG_MAP_FRAGMENT) as? SupportMapFragment
@@ -117,14 +127,22 @@ class MapFragment : Fragment() {
         map.moveCamera(
             CameraUpdateFactory.newLatLngZoom(LONDON_LATLNG, DEFAULT_ZOOM),
         )
+        // Issue #2 fix: replaced labeled return with if/else expression
         map.setOnMarkerClickListener { marker ->
-            val vehicleId = marker.tag as? String ?: return@setOnMarkerClickListener false
-            (activity as? OnBusSelectedListener)?.onBusSelected(vehicleId)
-            true
+            val vehicleId = marker.tag as? String
+            if (vehicleId == null) {
+                false
+            } else {
+                (activity as? OnBusSelectedListener)?.onBusSelected(vehicleId)
+                true
+            }
         }
     }
 
-    // endregion | region UI state
+    // endregion
+
+    // region UI state
+
     private fun observeUiState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -165,7 +183,10 @@ class MapFragment : Fragment() {
         binding.errorText.text = message
     }
 
-    // endregion | region Marker management
+    // endregion
+
+    // region Marker management
+
     private fun updateBusMarkers(buses: List<BusPosition>) {
         val map = googleMap ?: return
         val incomingIds = buses.map { it.vehicleId }.toSet()
@@ -200,10 +221,16 @@ class MapFragment : Fragment() {
         }
     }
 
-    // endregion | region Location permission
+    // endregion
+
+    // region Location permission
+
     private fun requestLocationPermissionIfNeeded() {
-        if (hasLocationPermission()) enableMyLocation()
-        else locationPermissionLauncher.launch(LOCATION_PERMISSIONS)
+        if (hasLocationPermission()) {
+            enableMyLocation()
+        } else {
+            locationPermissionLauncher.launch(LOCATION_PERMISSIONS)
+        }
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -229,18 +256,43 @@ class MapFragment : Fragment() {
         ).show()
     }
 
-    // endregion | region FAB
+    // endregion
+
+    // region FAB
+
+    // Issue #3 fix: FAB now moves camera to user's last known location via FusedLocationProviderClient
     private fun setupFab() {
         binding.fabMyLocation.setOnClickListener {
             if (hasLocationPermission()) {
-                enableMyLocation()
+                moveToMyLocation()
             } else {
                 locationPermissionLauncher.launch(LOCATION_PERMISSIONS)
             }
         }
     }
 
-    // endregion | region Retry
+    @SuppressLint("MissingPermission")
+    private fun moveToMyLocation() {
+        enableMyLocation()
+        val map = googleMap ?: return
+        LocationServices.getFusedLocationProviderClient(requireActivity())
+            .lastLocation
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    map.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(location.latitude, location.longitude),
+                            DEFAULT_ZOOM,
+                        ),
+                    )
+                }
+            }
+    }
+
+    // endregion
+
+    // region Retry
+
     private fun setupRetryButton() {
         binding.retryButton.setOnClickListener { viewModel.retry() }
     }
@@ -248,7 +300,7 @@ class MapFragment : Fragment() {
     // endregion
 
     // Callback interface for notifying the host Activity that a bus marker was tapped.
-    // implements this to open BusDetailFragment.
+    // MainActivity implements this to open BusDetailFragment.
     interface OnBusSelectedListener {
         fun onBusSelected(vehicleId: String)
     }

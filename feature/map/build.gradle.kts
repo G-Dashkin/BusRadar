@@ -30,6 +30,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
 
     implementation(project(":core:di"))
 }

@@ -1,10 +1,11 @@
 package com.dashkin.busradar.feature.map.data.repository
 
 import com.dashkin.busradar.feature.map.domain.model.BusPosition
-import com.dashkin.busradar.feature.map.domain.model.Result
+import com.dashkin.busradar.feature.map.domain.model.Outcome
 import com.dashkin.busradar.feature.map.domain.repository.MapRepository
 import kotlinx.coroutines.delay
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.random.Random
 
 // Stub implementation of MapRepository.
@@ -12,11 +13,12 @@ import kotlin.random.Random
 // random movement on each call to simulate real-time updates.
 // Replace this implementation with a real GTFS-RT network call
 // once :core:network is wired up.
+@Singleton
 class MapRepositoryImpl @Inject constructor() : MapRepository {
 
-    override suspend fun getBusPositions(): Result<List<BusPosition>> {
+    override suspend fun getBusPositions(): Outcome<List<BusPosition>> {
         delay(SIMULATED_NETWORK_DELAY_MS)
-        return Result.Success(STUB_BUSES.map { it.withRandomMovement() })
+        return Outcome.Success(STUB_BUSES.map { it.withRandomMovement() })
     }
 
     private fun BusPosition.withRandomMovement(): BusPosition = copy(
